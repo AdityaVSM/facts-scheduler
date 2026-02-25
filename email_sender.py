@@ -12,14 +12,19 @@ logger = logging.getLogger(__name__)
 def send(fact: GeneratedFact):
     sender = os.getenv("MAIL_SENDER")
     password = os.getenv("MAIL_APP_PASSWORD")
-    recipient = os.getenv("MAIL_RECIPIENT", "adityavsm55@gmail.com")
+    raw_recipients = os.getenv("MAIL_RECIPIENT", "")
 
-    logger.info("[Email] Sending '%s' to %s", fact.title, recipient)
+    # Support comma-separated list of recipients in the secret
+    recipients = [r.strip() for r in raw_recipients.split(",") if r.strip()]
+    if not recipients:
+        raise ValueError("MAIL_RECIPIENT is empty — set a comma-separated list of email addresses")
+
+    logger.info("[Email] Sending '%s' to %d recipient(s): %s", fact.title, len(recipients), ", ".join(recipients))
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"☕ Java Fact of the Day: {fact.title}"
     msg["From"] = sender
-    msg["To"] = recipient
+    msg["To"] = ", ".join(recipients)
 
     html_body = _build_html(fact)
     msg.attach(MIMEText(html_body, "html"))
@@ -28,9 +33,9 @@ def send(fact: GeneratedFact):
         server.ehlo()
         server.starttls()
         server.login(sender, password)
-        server.sendmail(sender, recipient, msg.as_string())
+        server.sendmail(sender, recipients, msg.as_string())
 
-    logger.info("[Email] Delivered successfully: '%s'", fact.title)
+    logger.info("[Email] Delivered successfully to %d recipient(s): '%s'", len(recipients), fact.title)
 
 
 def _build_html(fact: GeneratedFact) -> str:
