@@ -6,7 +6,7 @@ import email_sender
 
 logger = logging.getLogger(__name__)
 
-MAX_DEDUP_RETRIES = 3
+MAX_DEDUP_RETRIES = 5
 
 
 def run() -> bool:
@@ -16,14 +16,18 @@ def run() -> bool:
     """
     logger.info("[Pipeline] Starting daily fact pipeline")
 
+    # Fetch previously sent titles to guide the LLM away from repeats
+    previous_titles = database.get_previous_titles()
+    logger.info("[Pipeline] %d previous facts in database", len(previous_titles))
+
     # Step 1: Generate with deduplication retries
     fact = None
     for attempt in range(1, MAX_DEDUP_RETRIES + 1):
         logger.info("[Pipeline] Generation attempt %d/%d", attempt, MAX_DEDUP_RETRIES)
-        candidate = fact_generator.generate()
+        candidate = fact_generator.generate(previous_titles=previous_titles)
 
         if database.title_exists(candidate.title) or database.hash_exists(candidate.content_hash):
-            logger.warning("[Pipeline] Duplicate on attempt %d — retrying...", attempt)
+            logger.warning("[Pipeline] Duplicate on attempt %d (title='%s') — retrying...", attempt, candidate.title)
             continue
 
         fact = candidate

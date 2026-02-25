@@ -68,6 +68,14 @@ def save_fact(title: str, content: str, content_hash: str, topic_category: str):
     logger.info("[DB] Fact saved: '%s'", title)
 
 
+def get_previous_titles() -> list[str]:
+    """Return all previously sent fact titles."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT title FROM sent_facts ORDER BY sent_at DESC")
+            return [row[0] for row in cur.fetchall()]
+
+
 def total_facts() -> int:
     with get_connection() as conn:
         with conn.cursor() as cur:

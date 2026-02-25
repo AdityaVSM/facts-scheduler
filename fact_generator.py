@@ -3,6 +3,7 @@ import re
 import logging
 from dataclasses import dataclass
 from llm_client import generate_raw_fact
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +23,8 @@ class GeneratedFact:
     topic_category: str
 
 
-def generate() -> GeneratedFact:
-    raw = generate_raw_fact()
+def generate(previous_titles: list[str] | None = None) -> GeneratedFact:
+    raw = generate_raw_fact(previous_titles=previous_titles)
     title = _extract_title(raw)
     content_hash = hashlib.sha256(raw.encode()).hexdigest()
     category = _detect_category(raw)
